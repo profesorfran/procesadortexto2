@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Procesador de Texto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      -webkit-text-size-adjust: 100%; /* Evita el zoom automático en inputs en iOS */
+    }
+    input, textarea {
+      width: 100%;
+      font-size: 16px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    textarea {
+      height: 220px;
+      resize: vertical;
+      overflow-y: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      -moz-user-select: none;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #contador {
+      text-align: right;
+      font-size: 14px;
+      color: #333;
+    }
+    .autor {
+      font-size: 14px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .mensaje {
+      font-size: 16px;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .mensaje.exito {
+      color: green;
+    }
+    .mensaje.error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h2>Procesador de Texto</h2>
+  <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
+
+  <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  
+  <!-- AQUÍ ESTÁ LA MODIFICACIÓN CLAVE -->
+  <textarea id="texto" 
+            placeholder="Escribe tu texto aquí…"
+            spellcheck="false" 
+            autocorrect="off" 
+            autocapitalize="off" 
+            autocomplete="off"
+            onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"></textarea>
+
+  <div id="contador">0 palabras</div>
+  <button onclick="enviarTexto()">Enviar</button>
+  <div class="mensaje" id="mensaje"></div>
+
+  <script>
+    const textarea = document.getElementById("texto");
+    const contador = document.getElementById("contador");
+    const mensaje = document.getElementById("mensaje");
+
+    textarea.addEventListener("input", () => {
+      // Limpia el mensaje de éxito/error al empezar a escribir de nuevo
+      if (mensaje.innerText !== "") {
+        mensaje.innerText = "";
+        mensaje.className = "mensaje";
+      }
+      const textoLimpio = textarea.value.trim();
+      if (textoLimpio === "") {
+        contador.innerText = "0 palabras";
+        return;
+      }
+      const palabras = textoLimpio.split(/\s+/);
+      contador.innerText = palabras.length + " palabras";
+    });
+
+    textarea.addEventListener("keydown", function(e) {
+      if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener("blur", () => {
+      // Comentado para evitar que se borre el texto si el alumno cambia de pestaña
+      // document.getElementById("texto").value = "";
+      // contador.innerText = "0 palabras";
+    });
+
+    function enviarTexto() {
+      const nombre = document.getElementById("nombre").value.trim();
+      const apellidos = document.getElementById("apellidos").value.trim();
+      const curso = document.getElementById("curso").value.trim();
+      const texto = textarea.value.trim();
+
+      if (!nombre || !apellidos || !curso || !texto) {
+        alert("Por favor, rellena todos los campos antes de enviar.");
+        return;
+      }
+
+      mensaje.innerText = "Enviando...";
+      mensaje.className = "mensaje";
+
+      const params = new URLSearchParams();
+      params.append("nombre", nombre);
+      params.append("apellidos", apellidos);
+      params.append("curso", curso);
+      params.append("texto", texto);
+
+      fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec", {
+        method: "POST",
+        body: params // No es necesario el header con URLSearchParams
+      })
+      .then(response => {
+        if (!response.ok) {
+          // Si la respuesta del servidor no es exitosa, lanzamos un error
+          throw new Error('Respuesta del servidor no fue OK');
+        }
+        return response.text();
+      })
+      .then(() => {
+        mensaje.innerText = "✅ Texto enviado correctamente.";
+        mensaje.className = "mensaje exito";
+        document.getElementById("nombre").value = "";
+        document.getElementById("apellidos").value = "";
+        document.getElementById("curso").value = "";
+        textarea.value = "";
+        contador.innerText = "0 palabras";
+      })
+      .catch((error) => {
+        // MEJORA: Ahora muestra un mensaje de error real si falla el envío
+        console.error('Error en el envío:', error);
+        mensaje.innerText = "❌ Error al enviar el texto. Inténtalo de nuevo.";
+        mensaje.className = "mensaje error";
+      });
+    }
+  </script>
+</body>
+</html>
