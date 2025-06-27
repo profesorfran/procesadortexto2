@@ -135,14 +135,28 @@
       params.append("curso", curso);
       params.append("texto", texto);
 
-      // ¡AQUÍ ESTÁ LA URL ACTUALIZADA!
-      const urlScript = "https://script.google.com/macros/s/AKfycbyYT-OVgur8IFQP66j40g8jpsn7vMJpkRWiJXFpK75MjFFrmFWZJKwi1LHHmrgD3OLMnQ/exec";
+      // ¡LA URL DE TU SCRIPT DE GOOGLE APPS SCRIPT HA SIDO ACTUALIZADA AQUÍ!
+      const urlScript = "https://script.google.com/macros/s/AKfycbwTofimjEgNCK8DXIFWziaNRfw6V02ic4pQx5ZPpqZRIwIYejyxniLtTPsyCi1l6hHTNw/exec";
 
       fetch(urlScript, {
         method: "POST",
         body: params
       })
-      .then(response => response.json()) // Esperamos una respuesta JSON
+      .then(response => {
+        // Verificamos si la respuesta es OK (status 200-299)
+        if (!response.ok) {
+          // Si no es OK, intentamos leer el error del cuerpo si es JSON, o lanzamos un error genérico
+          return response.text().then(text => {
+            try {
+              const errorData = JSON.parse(text);
+              throw new Error(errorData.message || 'Error desconocido del servidor.');
+            } catch (e) {
+              throw new Error(`Error de red o servidor: ${response.status} ${response.statusText}. Respuesta: ${text}`);
+            }
+          });
+        }
+        return response.json(); // Esperamos una respuesta JSON si la respuesta es OK
+      })
       .then(data => {
         if (data.status === "success") {
           mensaje.innerText = "✅ Texto enviado correctamente.";
@@ -153,13 +167,13 @@
           textarea.value = "";
           contador.innerText = "0 palabras";
         } else {
-          // Si el script devuelve un error, lo mostramos
+          // Si el script devuelve un JSON con status: "error", lo mostramos
           throw new Error(data.message || 'El script de Google devolvió un error.');
         }
       })
       .catch((error) => {
         console.error('Error en el envío:', error);
-        mensaje.innerText = "❌ Error al enviar el texto. Inténtalo de nuevo.";
+        mensaje.innerText = "❌ Error al enviar el texto. Inténtalo de nuevo. Detalles: " + error.message;
         mensaje.className = "mensaje error";
       });
     }
