@@ -78,7 +78,6 @@
   <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
   
-  <!-- AQUÍ ESTÁ LA MODIFICACIÓN CLAVE -->
   <textarea id="texto" 
             placeholder="Escribe tu texto aquí…"
             spellcheck="false" 
@@ -97,7 +96,6 @@
     const mensaje = document.getElementById("mensaje");
 
     textarea.addEventListener("input", () => {
-      // Limpia el mensaje de éxito/error al empezar a escribir de nuevo
       if (mensaje.innerText !== "") {
         mensaje.innerText = "";
         mensaje.className = "mensaje";
@@ -115,12 +113,6 @@
       if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
         e.preventDefault();
       }
-    });
-
-    window.addEventListener("blur", () => {
-      // Comentado para evitar que se borre el texto si el alumno cambia de pestaña
-      // document.getElementById("texto").value = "";
-      // contador.innerText = "0 palabras";
     });
 
     function enviarTexto() {
@@ -143,28 +135,29 @@
       params.append("curso", curso);
       params.append("texto", texto);
 
-      fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec", {
+      // Asegúrate de usar la NUEVA URL que obtengas al volver a desplegar el script
+      const urlScript = "https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec";
+
+      fetch(urlScript, {
         method: "POST",
-        body: params // No es necesario el header con URLSearchParams
+        body: params
       })
-      .then(response => {
-        if (!response.ok) {
-          // Si la respuesta del servidor no es exitosa, lanzamos un error
-          throw new Error('Respuesta del servidor no fue OK');
+      .then(response => response.json()) // Esperamos una respuesta JSON
+      .then(data => {
+        if (data.status === "success") {
+          mensaje.innerText = "✅ Texto enviado correctamente.";
+          mensaje.className = "mensaje exito";
+          document.getElementById("nombre").value = "";
+          document.getElementById("apellidos").value = "";
+          document.getElementById("curso").value = "";
+          textarea.value = "";
+          contador.innerText = "0 palabras";
+        } else {
+          // Si el script devuelve un error, lo mostramos
+          throw new Error(data.message || 'El script de Google devolvió un error.');
         }
-        return response.text();
-      })
-      .then(() => {
-        mensaje.innerText = "✅ Texto enviado correctamente.";
-        mensaje.className = "mensaje exito";
-        document.getElementById("nombre").value = "";
-        document.getElementById("apellidos").value = "";
-        document.getElementById("curso").value = "";
-        textarea.value = "";
-        contador.innerText = "0 palabras";
       })
       .catch((error) => {
-        // MEJORA: Ahora muestra un mensaje de error real si falla el envío
         console.error('Error en el envío:', error);
         mensaje.innerText = "❌ Error al enviar el texto. Inténtalo de nuevo.";
         mensaje.className = "mensaje error";
