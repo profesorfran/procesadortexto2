@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
      2 <html lang="es">
      3 <head>
      4   <meta charset="UTF-8" />
@@ -21,10 +21,10 @@
     21       height: 220px;
     22       resize: vertical;
     23       overflow-y: auto;
-    24       user-select: none; /* MEJORA: Deshabilita la selección de texto */
-    25       -webkit-user-select: none; /* Para navegadores WebKit */
-    26       -ms-user-select: none; /* Para Internet Explorer/Edge */
-    27       -moz-user-select: none; /* Para Firefox */
+    24       user-select: none;
+    25       -webkit-user-select: none;
+    26       -ms-user-select: none;
+    27       -moz-user-select: none;
     28     }
     29     button {
     30       width: 100%;
@@ -73,87 +73,86 @@
     71     const textarea = document.getElementById("texto");
     72     const contador = document.getElementById("contador");
     73     const mensaje = document.getElementById("mensaje");
-    74     let blurCount = 0; // MEJORA: Contador de veces que se pierde el foco
-    75
-    76     // MEJORA: Detección de Herramientas de Desarrollador
-    77     const checkDevTools = () => {
-    78       // Heurística común: si el tamaño de la ventana interna es mucho menor que la externa
-    79       // o si el tiempo de ejecución de una función es inusualmente largo (por el debugger)
-    80       if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
-    81         if (textarea.value.trim().length > 0) { // Solo si hay texto escrito
-    82           alert("¡Atención! Se han detectado herramientas de desarrollador. El texto será borrado.");
-    83           textarea.value = "";
-    84           contador.innerText = "0 palabras";
-    85           blurCount = 0; // Reiniciar contador de desenfoques
-    86           // Aquí podrías enviar una alerta al servidor si tu Google Apps Script lo permite
-    87         }
-    88       }
-    89       // Otra heurística (más agresiva, puede causar pausas):
-    90       // (function() {}.constructor("debugger")());
-    91     };
-    92     window.addEventListener('resize', checkDevTools); // Comprobar al redimensionar
-    93     setInterval(checkDevTools, 1000); // Comprobar periódicamente
-    94
-    95     textarea.addEventListener("input", () => {
-    96       const palabras = textarea.value.trim().split(/\s+/).filter(p => p.length > 0);
-    97       contador.innerText = palabras.length + " palabras";
-    98     });
-    99
-   100     textarea.addEventListener("keydown", function(e) {
-   101       if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
-   102         e.preventDefault();
-   103       }
-   104     });
-   105
-   106     window.addEventListener("blur", () => {
-   107       blurCount++; // MEJORA: Incrementar contador de desenfoques
-   108       document.getElementById("texto").value = "";
-   109       contador.innerText = "0 palabras";
-   110     });
-   111
-   112     function enviarTexto() {
-   113       const nombre = document.getElementById("nombre").value.trim();
-   114       const apellidos = document.getElementById("apellidos").value.trim();
-   115       const curso = document.getElementById("curso").value.trim();
-   116       const texto = textarea.value.trim();
-   117
-   118       if (!nombre || !apellidos || !curso || !texto) {
-   119         alert("Por favor, rellena todos los campos antes de enviar.");
-   120         return;
-   121       }
-   122
-   123       const params = new URLSearchParams();
-   124       params.append("nombre", nombre);
-   125       params.append("apellidos", apellidos);
-   126       params.append("curso", curso);
-   127       params.append("texto", texto);
-   128       params.append("blurCount", blurCount); // MEJORA: Enviar el contador de desenfoques
-   129
-   130       fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec",
+    74
+    75     // MEJORA: Prevenir la selección de texto por pulsación larga en móviles
+    76     textarea.addEventListener('touchstart', (e) => {
+    77         // Previene el comportamiento por defecto que podría iniciar la selección
+    78         e.preventDefault();
+    79     });
+    80     textarea.addEventListener('touchmove', (e) => {
+    81         // Previene el comportamiento por defecto que podría iniciar la selección
+    82         e.preventDefault();
+    83     });
+    84
+    85     // MEJORA: Asegurar que el menú contextual (clic derecho/pulsación larga) esté deshabilitado
+    86     textarea.addEventListener('contextmenu', (e) => {
+    87         e.preventDefault();
+    88     });
+    89
+    90     // MEJORA: Borrar el texto si el usuario intenta salir de la página o recargarla
+    91     window.addEventListener("beforeunload", () => {
+    92         document.getElementById("texto").value = "";
+    93         contador.innerText = "0 palabras";
+    94         // Aquí podrías añadir lógica para enviar el texto actual al servidor
+    95         // si quieres guardar el progreso antes de que el usuario abandone la página.
+    96     });
+    97
+    98     textarea.addEventListener("input", () => {
+    99       const palabras = textarea.value.trim().split(/\s+/).filter(p => p.length > 0);
+   100       contador.innerText = palabras.length + " palabras";
+   101     });
+   102
+   103     textarea.addEventListener("keydown", function(e) {
+   104       if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
+   105         e.preventDefault();
+   106       }
+   107     });
+   108
+   109     window.addEventListener("blur", () => {
+   110       document.getElementById("texto").value = "";
+   111       contador.innerText = "0 palabras";
+   112     });
+   113
+   114     function enviarTexto() {
+   115       const nombre = document.getElementById("nombre").value.trim();
+   116       const apellidos = document.getElementById("apellidos").value.trim();
+   117       const curso = document.getElementById("curso").value.trim();
+   118       const texto = textarea.value.trim();
+   119
+   120       if (!nombre || !apellidos || !curso || !texto) {
+   121         alert("Por favor, rellena todos los campos antes de enviar.");
+   122         return;
+   123       }
+   124
+   125       const params = new URLSearchParams();
+   126       params.append("nombre", nombre);
+   127       params.append("apellidos", apellidos);
+   128       params.append("curso", curso);
+   129       params.append("texto", texto);
+   130
+   131       fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec",
        {
-   131         method: "POST",
-   132         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-   133         body: params.toString()
-   134       })
-   135       .then(() => {
-   136         mensaje.innerText = "✅ Texto enviado correctamente.";
-   137         document.getElementById("nombre").value = "";
-   138         document.getElementById("apellidos").value = "";
-   139         document.getElementById("curso").value = "";
-   140         textarea.value = "";
-   141         contador.innerText = "0 palabras";
-   142         blurCount = 0; // MEJORA: Reiniciar contador tras envío exitoso
+   132         method: "POST",
+   133         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+   134         body: params.toString()
+   135       })
+   136       .then(() => {
+   137         mensaje.innerText = "✅ Texto enviado correctamente.";
+   138         document.getElementById("nombre").value = "";
+   139         document.getElementById("apellidos").value = "";
+   140         document.getElementById("curso").value = "";
+   141         textarea.value = "";
+   142         contador.innerText = "0 palabras";
    143       })
    144       .catch(() => {
-   145         mensaje.innerText = "✅ Texto enviado correctamente."; // Mantener el mensaje de éxito incluso en error de red
+   145         mensaje.innerText = "✅ Texto enviado correctamente.";
    146         document.getElementById("nombre").value = "";
    147         document.getElementById("apellidos").value = "";
    148         document.getElementById("curso").value = "";
    149         textarea.value = "";
    150         contador.innerText = "0 palabras";
-   151         blurCount = 0; // MEJORA: Reiniciar contador tras intento de envío
-   152       });
-   153     }
-   154   </script>
-   155 </body>
-   156 </html>
+   151       });
+   152     }
+   153   </script>
+   154 </body>
+   155 </html>
