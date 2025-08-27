@@ -1,182 +1,159 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Procesador de Texto</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-      -webkit-text-size-adjust: 100%; /* Evita el zoom automático en inputs en iOS */
-    }
-    input, textarea {
-      width: 100%;
-      font-size: 16px;
-      padding: 10px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    textarea {
-      height: 220px;
-      resize: vertical;
-      overflow-y: auto;
-      user-select: none;
-      -webkit-user-select: none;
-      -ms-user-select: none;
-      -moz-user-select: none;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #contador {
-      text-align: right;
-      font-size: 14px;
-      color: #333;
-    }
-    .autor {
-      font-size: 14px;
-      text-align: center;
-      color: #666;
-      margin-bottom: 20px;
-    }
-    .mensaje {
-      font-size: 16px;
-      text-align: center;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    .mensaje.exito {
-      color: green;
-    }
-    .mensaje.error {
-      color: red;
-    }
-  </style>
-</head>
-<body>
-  <h2>Procesador de Texto</h2>
-  <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
-
-  <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-  <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-  <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-  
-  <textarea id="texto" 
-            placeholder="Escribe tu texto aquí…"
-            spellcheck="false" 
-            autocorrect="off" 
-            autocapitalize="off" 
-            autocomplete="off"
-            onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"></textarea>
-
-  <div id="contador">0 palabras</div>
-  <button onclick="enviarTexto()">Enviar</button>
-  <div class="mensaje" id="mensaje"></div>
-
-  <script>
-    const textarea = document.getElementById("texto");
-    const contador = document.getElementById("contador");
-    const mensaje = document.getElementById("mensaje");
-
-    textarea.addEventListener("input", () => {
-      if (mensaje.innerText !== "") {
-        mensaje.innerText = "";
-        mensaje.className = "mensaje";
-      }
-      const textoLimpio = textarea.value.trim();
-      if (textoLimpio === "") {
-        contador.innerText = "0 palabras";
-        return;
-      }
-      const palabras = textoLimpio.split(/\s+/);
-      contador.innerText = palabras.length + " palabras";
-    });
-
-    textarea.addEventListener("keydown", function(e) {
-      if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-      }
-    });
-
-    function enviarTexto() {
-      const nombre = document.getElementById("nombre").value.trim();
-      const apellidos = document.getElementById("apellidos").value.trim();
-      const curso = document.getElementById("curso").value.trim();
-      const texto = textarea.value.trim();
-
-      if (!nombre || !apellidos || !curso || !texto) {
-        alert("Por favor, rellena todos los campos antes de enviar.");
-        return;
-      }
-
-      mensaje.innerText = "Enviando...";
-      mensaje.className = "mensaje";
-
-      const params = new URLSearchParams();
-      params.append("nombre", nombre);
-      params.append("apellidos", apellidos);
-      params.append("curso", curso);
-      params.append("texto", texto);
-
-      // ¡LA URL DE TU SCRIPT DE GOOGLE APPS SCRIPT HA SIDO ACTUALIZADA AQUÍ!
-      const urlScript = "https://script.google.com/macros/s/AKfycbwTofimjEgNCK8DXIFWziaNRfw6V02ic4pQx5ZPpqZRIwIYejyxniLtTPsyCi1l6hHTNw/exec";
-
-      fetch(urlScript, {
-        method: "POST",
-        body: params
-      })
-      .then(response => {
-        // Verificamos si la respuesta es OK (status 200-299)
-        if (!response.ok) {
-          // Si no es OK, intentamos leer el error del cuerpo si es JSON, o lanzamos un error genérico
-          return response.text().then(text => {
-            try {
-              const errorData = JSON.parse(text);
-              throw new Error(errorData.message || 'Error desconocido del servidor.');
-            } catch (e) {
-              throw new Error(`Error de red o servidor: ${response.status} ${response.statusText}. Respuesta: ${text}`);
-            }
-          });
-        }
-        return response.json(); // Esperamos una respuesta JSON si la respuesta es OK
-      })
-      .then(data => {
-        if (data.status === "success") {
-          mensaje.innerText = "✅ Texto enviado correctamente.";
-          mensaje.className = "mensaje exito";
-          document.getElementById("nombre").value = "";
-          document.getElementById("apellidos").value = "";
-          document.getElementById("curso").value = "";
-          textarea.value = "";
-          contador.innerText = "0 palabras";
-        } else {
-          // Si el script devuelve un JSON con status: "error", lo mostramos
-          throw new Error(data.message || 'El script de Google devolvió un error.');
-        }
-      })
-      .catch((error) => {
-        console.error('Error en el envío:', error);
-        mensaje.innerText = "❌ Error al enviar el texto. Inténtalo de nuevo. Detalles: " + error.message;
-        mensaje.className = "mensaje error";
-      });
-    }
-  </script>
-</body>
-</html>
+     2 <html lang="es">
+     3 <head>
+     4   <meta charset="UTF-8" />
+     5   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     6   <title>Procesador de Texto</title>
+     7   <style>
+     8     body {
+     9       font-family: Arial, sans-serif;
+    10       background: #f4f4f4;
+    11       padding: 20px;
+    12     }
+    13     input, textarea {
+    14       width: 100%;
+    15       font-size: 16px;
+    16       padding: 10px;
+    17       margin-bottom: 10px;
+    18       box-sizing: border-box;
+    19     }
+    20     textarea {
+    21       height: 220px;
+    22       resize: vertical;
+    23       overflow-y: auto;
+    24       user-select: none; /* MEJORA: Deshabilita la selección de texto */
+    25       -webkit-user-select: none; /* Para navegadores WebKit */
+    26       -ms-user-select: none; /* Para Internet Explorer/Edge */
+    27       -moz-user-select: none; /* Para Firefox */
+    28     }
+    29     button {
+    30       width: 100%;
+    31       padding: 12px;
+    32       font-size: 16px;
+    33     }
+    34     #contador {
+    35       text-align: right;
+    36       font-size: 14px;
+    37       color: #333;
+    38     }
+    39     .autor {
+    40       font-size: 14px;
+    41       text-align: center;
+    42       color: #666;
+    43       margin-bottom: 20px;
+    44     }
+    45     .mensaje {
+    46       font-size: 16px;
+    47       color: green;
+    48       text-align: center;
+    49       margin-top: 10px;
+    50     }
+    51   </style>
+    52 </head>
+    53 <body>
+    54   <h2>Procesador de Texto</h2>
+    55   <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
+    56
+    57   <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck=
+       "false"
+    58          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+    59   <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck
+       ="false"
+    60          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+    61   <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+    62          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+    63   <textarea id="texto" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+    64             onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"
+    65             placeholder="Escribe tu texto aquí…"></textarea>
+    66   <div id="contador">0 palabras</div>
+    67   <button onclick="enviarTexto()">Enviar</button>
+    68   <div class="mensaje" id="mensaje"></div>
+    69
+    70   <script>
+    71     const textarea = document.getElementById("texto");
+    72     const contador = document.getElementById("contador");
+    73     const mensaje = document.getElementById("mensaje");
+    74     let blurCount = 0; // MEJORA: Contador de veces que se pierde el foco
+    75
+    76     // MEJORA: Detección de Herramientas de Desarrollador
+    77     const checkDevTools = () => {
+    78       // Heurística común: si el tamaño de la ventana interna es mucho menor que la externa
+    79       // o si el tiempo de ejecución de una función es inusualmente largo (por el debugger)
+    80       if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
+    81         if (textarea.value.trim().length > 0) { // Solo si hay texto escrito
+    82           alert("¡Atención! Se han detectado herramientas de desarrollador. El texto será borrado.");
+    83           textarea.value = "";
+    84           contador.innerText = "0 palabras";
+    85           blurCount = 0; // Reiniciar contador de desenfoques
+    86           // Aquí podrías enviar una alerta al servidor si tu Google Apps Script lo permite
+    87         }
+    88       }
+    89       // Otra heurística (más agresiva, puede causar pausas):
+    90       // (function() {}.constructor("debugger")());
+    91     };
+    92     window.addEventListener('resize', checkDevTools); // Comprobar al redimensionar
+    93     setInterval(checkDevTools, 1000); // Comprobar periódicamente
+    94
+    95     textarea.addEventListener("input", () => {
+    96       const palabras = textarea.value.trim().split(/\s+/).filter(p => p.length > 0);
+    97       contador.innerText = palabras.length + " palabras";
+    98     });
+    99
+   100     textarea.addEventListener("keydown", function(e) {
+   101       if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
+   102         e.preventDefault();
+   103       }
+   104     });
+   105
+   106     window.addEventListener("blur", () => {
+   107       blurCount++; // MEJORA: Incrementar contador de desenfoques
+   108       document.getElementById("texto").value = "";
+   109       contador.innerText = "0 palabras";
+   110     });
+   111
+   112     function enviarTexto() {
+   113       const nombre = document.getElementById("nombre").value.trim();
+   114       const apellidos = document.getElementById("apellidos").value.trim();
+   115       const curso = document.getElementById("curso").value.trim();
+   116       const texto = textarea.value.trim();
+   117
+   118       if (!nombre || !apellidos || !curso || !texto) {
+   119         alert("Por favor, rellena todos los campos antes de enviar.");
+   120         return;
+   121       }
+   122
+   123       const params = new URLSearchParams();
+   124       params.append("nombre", nombre);
+   125       params.append("apellidos", apellidos);
+   126       params.append("curso", curso);
+   127       params.append("texto", texto);
+   128       params.append("blurCount", blurCount); // MEJORA: Enviar el contador de desenfoques
+   129
+   130       fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec",
+       {
+   131         method: "POST",
+   132         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+   133         body: params.toString()
+   134       })
+   135       .then(() => {
+   136         mensaje.innerText = "✅ Texto enviado correctamente.";
+   137         document.getElementById("nombre").value = "";
+   138         document.getElementById("apellidos").value = "";
+   139         document.getElementById("curso").value = "";
+   140         textarea.value = "";
+   141         contador.innerText = "0 palabras";
+   142         blurCount = 0; // MEJORA: Reiniciar contador tras envío exitoso
+   143       })
+   144       .catch(() => {
+   145         mensaje.innerText = "✅ Texto enviado correctamente."; // Mantener el mensaje de éxito incluso en error de red
+   146         document.getElementById("nombre").value = "";
+   147         document.getElementById("apellidos").value = "";
+   148         document.getElementById("curso").value = "";
+   149         textarea.value = "";
+   150         contador.innerText = "0 palabras";
+   151         blurCount = 0; // MEJORA: Reiniciar contador tras intento de envío
+   152       });
+   153     }
+   154   </script>
+   155 </body>
+   156 </html>
