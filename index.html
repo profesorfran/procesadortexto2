@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de Texto</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        label, input, textarea, button { display: block; margin-bottom: 10px; }
+        textarea { width: 80%; height: 150px; padding: 10px; }
+        #contador { font-weight: bold; }
+        #mensaje { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
+        .error { color: red; border-color: red; }
+        .success { color: green; border-color: green; }
+    </style>
+</head>
+<body>
+    <h1>Procesador de Texto</h1>
+
+    <form id="textProcessorForm">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" required>
+
+        <label for="apellidos">Apellidos:</label>
+        <input type="text" id="apellidos" required>
+
+        <label for="curso">Curso:</label>
+        <input type="text" id="curso" required>
+
+        <label for="texto">Texto:</label>
+        <textarea id="texto" placeholder="Escribe tu texto aquí..." required></textarea>
+        <span id="contador">0 palabras</span>
+
+        <button type="button" id="btnEnviar" onclick="enviarTexto()">Enviar Texto</button>
+
+        <div id="mensaje"></div>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // === CONFIG ===
+            const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyZnJYoxtjKRaJqnRkVFFf47tDNhBb9tT9RvxVfqWw9cSGkf_NYcNV92gDWhPaIvNBo/exec";
+
+            // === DOM refs ===
+            const textarea = document.getElementById("texto");
+            const contador = document.getElementById("contador");
+            const mensaje  = document.getElementById("mensaje");
+            const btn      = document.getElementById("btnEnviar") || document.querySelector("button");
+
+            // sanity check
+            if (!textarea || !contador || !mensaje) {
+                console.error("Faltan elementos del DOM (texto/contador/mensaje). Revisa el HTML o el id del botón.");
+                return;
+            }
+
+            // --- Contador ---
+            textarea.addEventListener("input", () => {
+                const v = textarea.value.trim();
+                contador.innerText = (v ? v.split(/\s+/).filter(Boolean).length : 0) + " palabras";
+            });
+
+            // --- Bloqueo atajos copiar/pegar/cortar/seleccionar ---
+            textarea.addEventListener("keydown", (e) => {
+                if ((e.ctrlKey || e.metaKey) && ['v','c','x','a'].includes(e.key.toLowerCase())) {
+                    e.preventDefault();
+                }
+            });
+
+            // --- BLOQUEO TOTAL DE DRAG & DROP (página y textarea) + arrastre interno ---
+            const bloqueaDND = (el) => {
+                ["dragenter","dragover","dragleave","drop"].forEach(ev => {
+                    el.addEventListener(ev, (e) => {
+                        e.preventDefault(); e.stopPropagation(); return false;
+                    }, { passive: false, capture: true });
+                });
+            };
+            bloqueaDND(window); bloqueaDND(document); bloqueaDND(document.documentElement);
+            bloqueaDND(document.body); bloqueaDND(textarea);
+            textarea.setAttribute("ondrop","return false");
+            textarea.setAttribute("ondragover","return false");
+            textarea.setAttribute('draggable', 'false');
+            textarea.addEventListener('dragstart', (e) => { e.preventDefault(); }, { passive: false });
+            textarea.addEventListener('beforeinput', (e) => {
+                if (e.inputType === 'insertFromDrop') e.preventDefault();
+            });
+
+            // --- BORRADO INMEDIATO AL SALIR / CAMBIAR DE PESTAÑA/APP (ROBUSTO) ---
+            function borrarTexto() {
+                textarea.value = "";
+                contador.innerText = "0 palabras";
+                try { localStorage.removeItem("procesador_borrador"); } catch(_) {}
+            }
+            const wipe = () => borrarTexto();
+
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState !== "visible") wipe();
+            }, { capture: true });
+
+            // iOS viejos tienen este evento
+            document.addEventListener("webkitvisibilitychange", () => {
+                const st = document.webkitVisibilityState || document.visibilityState;
+                if (st && st !== "visible") wipe();
+            }, { capture: true });
+
+            window.addEventListener("blur", wipe, { capture: true });
+            window.addEventListener("pagehide", wipe, { capture: true });
+            window.addEventListener("beforeunload", wipe);
+            document.addEventListener("freeze", wipe, { capture: true });
+
+            // Watchdog por si el navegador no dispara eventos a tiempo
+            setInterval(() => {
+                const visible = document.visibilityState === "visible";
+                const focused = document.hasFocus ? document.hasFocus() : true;
+                if (!visible || !focused) wipe();
+            }, 200);
+
+            // --- Envío al Apps Script ---
+            async function enviarTexto() {
+                mensaje.textContent = "";
+                mensaje.classList.remove("error");
+
+                const nombre    = document.getElementById("nombre").value.trim();
+                const apellidos = document.getElementById("apellidos").value.trim();
+                const curso     = document.getElementById("curso").value.trim();
+                const texto     = textarea.value.trim();
+
+                if (!nombre || !apellidos || !curso || !texto) {
+                    mensaje.textContent = "❌ Por favor, rellena todos los campos antes de enviar.";
+                    mensaje.classList.add("error");
+                    return;
+                }
+
+                const params = new URLSearchParams({ nombre, apellidos, curso, texto });
+                if (btn) btn.disabled = true;
+
+                try {
+                    const resp = await fetch(WEBAPP_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: params.toString()
+                    });
+                    const data = await resp.json().catch(() => null);
+                    if (!resp.ok || !data || !data.ok) throw new Error((data && data.error) || "Error en el servidor");
+
+                    mensaje.innerHTML = `✅ Guardado en Drive como <b>${data.fileName}</b>. ` +
+                                        `<a href="${data.fileUrl}" target="_blank" rel="noopener">Abrir</a>`;
+
+                    // Limpieza total tras éxito
+                    document.getElementById("nombre").value = "";
+                    document.getElementById("apellidos").value = "";
+                    document.getElementById("curso").value = "";
+                    wipe();
+                } catch (e) {
+                    mensaje.textContent = "❌ No se pudo enviar. Revisa el WebApp o la conexión.";
+                    mensaje.classList.add("error");
+                }
+                finally {
+                    if (btn) btn.disabled = false;
+                }
+            }
+
+            // Exponer función al botón
+            window.enviarTexto = enviarTexto;
+        });
+    </script>
+</body>
+</html>
