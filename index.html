@@ -1,155 +1,135 @@
-   1 <!DOCTYPE html>
-     2 <html lang="es">
-     3 <head>
-     4   <meta charset="UTF-8" />
-     5   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     6   <title>Procesador de Texto</title>
-     7   <style>
-     8     body {
-     9       font-family: Arial, sans-serif;
-    10       background: #f4f4f4;
-    11       padding: 20px;
-    12     }
-    13     input, textarea {
-    14       width: 100%;
-    15       font-size: 16px;
-    16       padding: 10px;
-    17       margin-bottom: 10px;
-    18       box-sizing: border-box;
-    19     }
-    20     textarea {
-    21       height: 220px;
-    22       resize: vertical;
-    23       overflow-y: auto;
-    24       user-select: none;
-    25       -webkit-user-select: none;
-    26       -ms-user-select: none;
-    27       -moz-user-select: none;
-    28     }
-    29     button {
-    30       width: 100%;
-    31       padding: 12px;
-    32       font-size: 16px;
-    33     }
-    34     #contador {
-    35       text-align: right;
-    36       font-size: 14px;
-    37       color: #333;
-    38     }
-    39     .autor {
-    40       font-size: 14px;
-    41       text-align: center;
-    42       color: #666;
-    43       margin-bottom: 20px;
-    44     }
-    45     .mensaje {
-    46       font-size: 16px;
-    47       color: green;
-    48       text-align: center;
-    49       margin-top: 10px;
-    50     }
-    51   </style>
-    52 </head>
-    53 <body>
-    54   <h2>Procesador de Texto</h2>
-    55   <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
-    56
-    57   <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck=
-       "false"
-    58          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-    59   <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck
-       ="false"
-    60          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-    61   <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-    62          onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
-    63   <textarea id="texto" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-    64             onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"
-    65             placeholder="Escribe tu texto aquí…"></textarea>
-    66   <div id="contador">0 palabras</div>
-    67   <button onclick="enviarTexto()">Enviar</button>
-    68   <div class="mensaje" id="mensaje"></div>
-    69
-    70   <script>
-    71     const textarea = document.getElementById("texto");
-    72     const contador = document.getElementById("contador");
-    73     const mensaje = document.getElementById("mensaje");
-    74
-    75     // MEJORA: Prevenir la selección de texto por pulsación larga en móviles
-    76     textarea.addEventListener('touchstart', (e) => {
-    77         e.preventDefault();
-    78     });
-    79     textarea.addEventListener('touchmove', (e) => {
-    80         e.preventDefault();
-    81     });
-    82
-    83     // MEJORA: Asegurar que el menú contextual (clic derecho/pulsación larga) esté deshabilitado
-    84     textarea.addEventListener('contextmenu', (e) => {
-    85         e.preventDefault();
-    86     });
-    87
-    88     // MEJORA: Borrar el texto si el usuario intenta salir de la página o recargarla
-    89     window.addEventListener("beforeunload", () => {
-    90         document.getElementById("texto").value = "";
-    91         contador.innerText = "0 palabras";
-    92     });
-    93
-    94     textarea.addEventListener("input", () => {
-    95       // CORRECCIÓN: Expresión regular para dividir palabras por espacios en blanco
-    96       const palabras = textarea.value.trim().split(/\s+/).filter(p => p.length > 0);
-    97       contador.innerText = palabras.length + " palabras";
-    98     });
-    99
-   100     textarea.addEventListener("keydown", function(e) {
-   101       if ((e.ctrlKey || e.metaKey) && ['v', 'c', 'x', 'a'].includes(e.key.toLowerCase())) {
-   102         e.preventDefault();
-   103       }
-   104     });
-   105
-   106     window.addEventListener("blur", () => {
-   107       document.getElementById("texto").value = "";
-   108       contador.innerText = "0 palabras";
-   109     });
-   110
-   111     function enviarTexto() {
-   112       const nombre = document.getElementById("nombre").value.trim();
-   113       const apellidos = document.getElementById("apellidos").value.trim();
-   114       const curso = document.getElementById("curso").value.trim();
-   115       const texto = textarea.value.trim();
-   116
-   117       if (!nombre || !apellidos || !curso || !texto) {
-   118         alert("Por favor, rellena todos los campos antes de enviar.");
-   119         return;
-   120       }
-   121
-   122       const params = new URLSearchParams();
-   123       params.append("nombre", nombre);
-   124       params.append("apellidos", apellidos);
-   125       params.append("curso", curso);
-   126       params.append("texto", texto);
-   127
-   128       fetch("https://script.google.com/macros/s/AKfycbzfz-OW31TvIbzDr4emQSKAtrovOD5i0JuEXA1wVJmknlZjirVcYfXrAT48QMLTkwtb/exec",
-       {
-   129         method: "POST",
-   130         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-   131         body: params.toString()
-   132       })
-   133       .then(() => {
-   134         mensaje.innerText = "✅ Texto enviado correctamente.";
-   135         document.getElementById("nombre").value = "";
-   136         document.getElementById("apellidos").value = "";
-   137         document.getElementById("curso").value = "";
-   138         textarea.value = "";
-   139         contador.innerText = "0 palabras";
-   140       })
-   141       .catch(() => {
-   142         mensaje.innerText = "✅ Texto enviado correctamente.";
-   143         document.getElementById("nombre").value = "";
-   144         document.getElementById("apellidos").value = "";
-   145         document.getElementById("curso").value = "";
-   146         textarea.value = "";
-   147         contador.innerText = "0 palabras";
-   148       });
-   149     }
-   150   </script>
-   151 </body>
-   152 </html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Procesador de Texto</title>
+  <style>
+    html, body { overscroll-behavior-y: contain; } /* evita pull-to-refresh accidental */
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    input, textarea { width: 100%; font-size: 16px; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+    textarea { height: 220px; resize: vertical; overflow-y: auto; user-select: none; -webkit-user-select: none; -ms-user-select: none; -moz-user-select: none; }
+    button { width: 100%; padding: 12px; font-size: 16px; }
+    #contador { text-align: right; font-size: 14px; color: #333; }
+    .autor { font-size: 14px; text-align: center; color: #666; margin-bottom: 20px; }
+    .mensaje { font-size: 16px; color: green; text-align: center; margin-top: 10px; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h2>Procesador de Texto</h2>
+  <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
+
+  <p style="color: red; text-align: center; font-weight: bold; margin-top: 10px;">
+    ATENCIÓN: no se permite copiar/pegar. Si cambias de pestaña, se guardará un borrador local para no perder tu texto.
+  </p>
+
+  <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <textarea id="texto" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"
+            placeholder="Escribe tu texto aquí…"></textarea>
+
+  <div id="contador">0 palabras</div>
+  <button id="btnEnviar" onclick="enviarTexto()">Enviar</button>
+  <div class="mensaje" id="mensaje"></div>
+
+  <script>
+    // === CONFIG ===
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVU8Sn7KQ_52m19F4DrhTukog1xI3gbgwNTVM2bsfprzI_hBCca36IbWZN0E1EwKk6/exec"; // tu exec
+
+    // === DOM refs ===
+    const textarea = document.getElementById("texto");
+    const contador = document.getElementById("contador");
+    const mensaje  = document.getElementById("mensaje");
+    const btn      = document.getElementById("btnEnviar");
+
+    // === Autosave local ===
+    const STORAGE_KEY = "procesador_borrador";
+    // Restaura borrador si existe
+    (function restore() {
+      const draft = localStorage.getItem(STORAGE_KEY);
+      if (draft) {
+        textarea.value = draft;
+        contador.innerText = (draft.trim() ? draft.trim().split(/\s+/).length : 0) + " palabras";
+      }
+    })();
+
+    // Contador y guardado continuo del borrador
+    textarea.addEventListener("input", () => {
+      const v = textarea.value;
+      const palabras = v.trim() ? v.trim().split(/\s+/).filter(Boolean).length : 0;
+      contador.innerText = palabras + " palabras";
+      localStorage.setItem(STORAGE_KEY, v);
+    });
+
+    // Bloqueo de atajos copiar/pegar/cortar/seleccionar
+    textarea.addEventListener("keydown", function(e) {
+      if ((e.ctrlKey || e.metaKey) && ['v','c','x','a'].includes(e.key.toLowerCase())) e.preventDefault();
+    });
+
+    // En vez de borrar al perder foco, guardamos borrador
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") localStorage.setItem(STORAGE_KEY, textarea.value);
+    });
+
+    async function enviarTexto() {
+      // Limpia mensaje
+      mensaje.textContent = "";
+      mensaje.classList.remove("error");
+
+      const nombre    = document.getElementById("nombre").value.trim();
+      const apellidos = document.getElementById("apellidos").value.trim();
+      const curso     = document.getElementById("curso").value.trim();
+      const texto     = textarea.value.trim();
+
+      if (!nombre || !apellidos || !curso || !texto) {
+        alert("Por favor, rellena todos los campos antes de enviar.");
+        return;
+      }
+
+      // Prepara envío
+      const params = new URLSearchParams({ nombre, apellidos, curso, texto });
+
+      btn.disabled = true;
+
+      try {
+        const resp = await fetch(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
+        });
+
+        // Intentamos JSON (según Apps Script propuesto)
+        const data = await resp.json().catch(() => null);
+
+        if (!resp.ok || !data || !data.ok) {
+          throw new Error((data && data.error) || "Error en el servidor");
+        }
+
+        // OK: mostramos nombre real del archivo y enlace
+        mensaje.innerHTML = `✅ Guardado en Drive como <b>${data.fileName}</b>. ` +
+                            `<a href="${data.fileUrl}" target="_blank" rel="noopener">Abrir</a>`;
+
+        // Limpieza y borrado de borrador
+        document.getElementById("nombre").value = "";
+        document.getElementById("apellidos").value = "";
+        document.getElementById("curso").value = "";
+        textarea.value = "";
+        contador.innerText = "0 palabras";
+        localStorage.removeItem(STORAGE_KEY);
+
+      } catch (err) {
+        mensaje.textContent = "❌ No se pudo enviar. Revisa que el WebApp esté desplegado y accesible.";
+        mensaje.classList.add("error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
