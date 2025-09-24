@@ -1,110 +1,166 @@
-<script>
-  // === CONFIG ===
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVU8Sn7KQ_52m19F4DrhTukog1xI3gbgwNTVM2bsfprzI_hBCca36IbWZN0E1EwKk6/exec";
-
-  // === DOM refs ===
-  const textarea = document.getElementById("texto");
-  const contador = document.getElementById("contador");
-  const mensaje  = document.getElementById("mensaje");
-  const btn      = document.querySelector("button");
-
-  // --- Contador ---
-  textarea.addEventListener("input", () => {
-    const v = textarea.value.trim();
-    contador.innerText = (v ? v.split(/\s+/).filter(Boolean).length : 0) + " palabras";
-  });
-
-  // --- Bloqueo copiar/pegar/cortar/seleccionar (atajos) ---
-  textarea.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && ['v','c','x','a'].includes(e.key.toLowerCase())) {
-      e.preventDefault();
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Procesador de Texto</title>
+  <style>
+    html, body { overscroll-behavior-y: contain; } /* evita pull-to-refresh accidental */
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    input, textarea { width: 100%; font-size: 16px; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+    textarea {
+      height: 220px;
+      resize: vertical;
+      overflow-y: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      -moz-user-select: none;
+      -webkit-user-drag: none; /* bloquea arrastre en iOS/Safari y Chromium móviles */
+      -khtml-user-drag: none;
     }
-  });
+    button { width: 100%; padding: 12px; font-size: 16px; }
+    #contador { text-align: right; font-size: 14px; color: #333; }
+    .autor { font-size: 14px; text-align: center; color: #666; margin-bottom: 20px; }
+    .mensaje { font-size: 16px; color: green; text-align: center; margin-top: 10px; }
+    .mensaje.error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h2>Procesador de Texto</h2>
+  <div class="autor">Desarrollado por Francisco David Sánchez Valencia</div>
 
-  // --- BLOQUEO TOTAL DE DRAG & DROP (página y textarea) ---
-  const bloqueaDND = (el) => {
-    ["dragenter","dragover","dragleave","drop"].forEach(ev => {
-      el.addEventListener(ev, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }, { passive: false, capture: true });
+  <p style="color: red; text-align: center; font-weight: bold; margin-top: 10px;">
+    ATENCIÓN: no se permite copiar/pegar ni arrastrar/soltar. Si sales de la página o cambias de pestaña/app, el texto se borra al instante.
+  </p>
+
+  <input type="text" id="nombre" placeholder="Nombre" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="apellidos" placeholder="Apellidos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+  <input type="text" id="curso" placeholder="Curso" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;">
+
+  <textarea id="texto" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            onpaste="return false;" oncopy="return false;" oncut="return false;" oncontextmenu="return false;"
+            placeholder="Escribe tu texto aquí…"></textarea>
+
+  <div id="contador">0 palabras</div>
+  <button id="btnEnviar" onclick="enviarTexto()">Enviar</button>
+  <div class="mensaje" id="mensaje"></div>
+
+  <script>
+    // === CONFIG ===
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVU8Sn7KQ_52m19F4DrhTukog1xI3gbgwNTVM2bsfprzI_hBCca36IbWZN0E1EwKk6/exec";
+
+    // === DOM refs ===
+    const textarea = document.getElementById("texto");
+    const contador = document.getElementById("contador");
+    const mensaje  = document.getElementById("mensaje");
+    const btn      = document.getElementById("btnEnviar");
+
+    // --- Contador ---
+    textarea.addEventListener("input", () => {
+      const v = textarea.value.trim();
+      contador.innerText = (v ? v.split(/\s+/).filter(Boolean).length : 0) + " palabras";
     });
-  };
-  bloqueaDND(window);
-  bloqueaDND(document);
-  bloqueaDND(document.documentElement);
-  bloqueaDND(document.body);
-  bloqueaDND(textarea);
-  // Extra: evita que el navegador muestre “soltar para pegar”
-  textarea.setAttribute("ondrop","return false");
-  textarea.setAttribute("ondragover","return false");
 
-  // --- BORRADO INMEDIATO AL SALIR / CAMBIAR DE PESTAÑA/APP ---
-  function borrarTexto() {
-    textarea.value = "";
-    contador.innerText = "0 palabras";
-    // Por si existiera algún autosave residual:
-    try { localStorage.removeItem("procesador_borrador"); } catch(_) {}
-  }
+    // --- Bloqueo atajos copiar/pegar/cortar/seleccionar ---
+    textarea.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && ['v','c','x','a'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    });
 
-  // Android/Chrome e iOS/Safari: cubrimos todos los casos sin gracia
-  document.addEventListener("visibilitychange", () => {
-    // visible -> ok; cualquier otro estado -> borrar YA
-    if (document.visibilityState !== "visible") borrarTexto();
-  });
-  // Pasa a segundo plano, navegas atrás/adelante o iOS usa BFCache
-  window.addEventListener("pagehide", borrarTexto, { capture: true });
-  // Pierde foco de ventana (App Switcher, selector de pestañas, etc.)
-  window.addEventListener("blur", borrarTexto);
-  // Cerrar o recargar (incluye pull-to-refresh)
-  window.addEventListener("beforeunload", borrarTexto);
-  // Page Lifecycle (algunas Chrome): congelación
-  document.addEventListener("freeze", borrarTexto);
-
-  // --- Envío al Apps Script ---
-  async function enviarTexto() {
-    mensaje.textContent = "";
-
-    const nombre    = document.getElementById("nombre").value.trim();
-    const apellidos = document.getElementById("apellidos").value.trim();
-    const curso     = document.getElementById("curso").value.trim();
-    const texto     = textarea.value.trim();
-
-    if (!nombre || !apellidos || !curso || !texto) {
-      alert("Por favor, rellena todos los campos antes de enviar.");
-      return;
-    }
-
-    const params = new URLSearchParams({ nombre, apellidos, curso, texto });
-    btn.disabled = true;
-
-    try {
-      const resp = await fetch(WEBAPP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString()
+    // --- BLOQUEO TOTAL DE DRAG & DROP (página y textarea) ---
+    const bloqueaDND = (el) => {
+      ["dragenter","dragover","dragleave","drop"].forEach(ev => {
+        el.addEventListener(ev, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }, { passive: false, capture: true });
       });
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok || !data || !data.ok) throw new Error((data && data.error) || "Error en el servidor");
+    };
+    bloqueaDND(window);
+    bloqueaDND(document);
+    bloqueaDND(document.documentElement);
+    bloqueaDND(document.body);
+    bloqueaDND(textarea);
+    // Evita que el navegador muestre “soltar para pegar”
+    textarea.setAttribute("ondrop","return false");
+    textarea.setAttribute("ondragover","return false");
 
-      mensaje.innerHTML = `✅ Guardado en Drive como <b>${data.fileName}</b>. ` +
-                          `<a href="${data.fileUrl}" target="_blank" rel="noopener">Abrir</a>`;
+    // --- Bloqueo de arrastre interno (reordenar texto dentro del textarea) ---
+    textarea.setAttribute('draggable', 'false');
+    textarea.addEventListener('dragstart', (e) => { e.preventDefault(); }, { passive: false });
+    textarea.addEventListener('dragover',  (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false, capture: true });
+    textarea.addEventListener('drop',      (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false, capture: true });
+    textarea.addEventListener('beforeinput', (e) => {
+      if (e.inputType === 'insertFromDrop') e.preventDefault();
+    });
 
-      // Limpieza total tras éxito
-      document.getElementById("nombre").value = "";
-      document.getElementById("apellidos").value = "";
-      document.getElementById("curso").value = "";
-      borrarTexto();
-    } catch (e) {
-      mensaje.textContent = "❌ No se pudo enviar. Revisa el WebApp o la conexión.";
-      mensaje.classList.add("error");
-    } finally {
-      btn.disabled = false;
+    // --- BORRADO INMEDIATO AL SALIR / CAMBIAR DE PESTAÑA/APP ---
+    function borrarTexto() {
+      textarea.value = "";
+      contador.innerText = "0 palabras";
+      try { localStorage.removeItem("procesador_borrador"); } catch(_) {}
     }
-  }
 
-  // Exponer para el botón
-  window.enviarTexto = enviarTexto;
-</script>
-  
+    // Android/Chrome e iOS/Safari: cubrir todos los casos sin gracia
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") borrarTexto();
+    });
+    window.addEventListener("pagehide", borrarTexto, { capture: true }); // iOS/Safari background & BFCache
+    window.addEventListener("blur", borrarTexto);                        // pierde foco (App Switcher, selector pestañas)
+    window.addEventListener("beforeunload", borrarTexto);                // cerrar o recargar (incluye pull-to-refresh)
+    document.addEventListener("freeze", borrarTexto);                    // Page Lifecycle (Chrome en móviles)
+
+    // --- Envío al Apps Script ---
+    async function enviarTexto() {
+      mensaje.textContent = "";
+      mensaje.classList.remove("error");
+
+      const nombre    = document.getElementById("nombre").value.trim();
+      const apellidos = document.getElementById("apellidos").value.trim();
+      const curso     = document.getElementById("curso").value.trim();
+      const texto     = textarea.value.trim();
+
+      if (!nombre || !apellidos || !curso || !texto) {
+        alert("Por favor, rellena todos los campos antes de enviar.");
+        return;
+      }
+
+      const params = new URLSearchParams({ nombre, apellidos, curso, texto });
+      btn.disabled = true;
+
+      try {
+        const resp = await fetch(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok || !data || !data.ok) throw new Error((data && data.error) || "Error en el servidor");
+
+        mensaje.innerHTML = `✅ Guardado en Drive como <b>${data.fileName}</b>. ` +
+                            `<a href="${data.fileUrl}" target="_blank" rel="noopener">Abrir</a>`;
+
+        // Limpieza total tras éxito
+        document.getElementById("nombre").value = "";
+        document.getElementById("apellidos").value = "";
+        document.getElementById("curso").value = "";
+        borrarTexto();
+      } catch (e) {
+        mensaje.textContent = "❌ No se pudo enviar. Revisa el WebApp o la conexión.";
+        mensaje.classList.add("error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Exponer función al botón
+    window.enviarTexto = enviarTexto;
+  </script>
+</body>
+</html>
